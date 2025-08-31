@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Share2, Copy, QrCode } from 'lucide-react';
+import ShareModal from './ShareModal';
 
 const QRGenerator = () => {
   const [url, setUrl] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
@@ -90,18 +92,72 @@ const QRGenerator = () => {
     }
   };
 
-  const downloadQRCode = () => {
+  const downloadQRCard = async () => {
     if (!qrCodeUrl) return;
 
-    const link = document.createElement('a');
-    link.download = 'qr-code.png';
-    link.href = qrCodeUrl;
-    link.click();
-    
-    toast({
-      title: "Download Started",
-      description: "Your QR code is being downloaded.",
-    });
+    // Create a branded card canvas
+    const cardCanvas = document.createElement('canvas');
+    const ctx = cardCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set card dimensions
+    cardCanvas.width = 600;
+    cardCanvas.height = 400;
+
+    // Draw card background with gradient
+    const gradient = ctx.createLinearGradient(0, 0, 600, 400);
+    gradient.addColorStop(0, 'hsl(262, 83%, 58%)');
+    gradient.addColorStop(1, 'hsl(230, 83%, 58%)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 400);
+
+    // Draw white content area
+    ctx.fillStyle = 'white';
+    ctx.roundRect(20, 20, 560, 360, 16);
+    ctx.fill();
+
+    // Add brand title
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('QR Code Generator', 300, 80);
+
+    // Add URL text
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#666';
+    const formattedUrl = formatUrl(url);
+    const maxWidth = 200;
+    if (ctx.measureText(formattedUrl).width > maxWidth) {
+      const truncated = formattedUrl.substring(0, 30) + '...';
+      ctx.fillText(truncated, 300, 110);
+    } else {
+      ctx.fillText(formattedUrl, 300, 110);
+    }
+
+    // Load and draw QR code
+    const qrImage = new Image();
+    qrImage.crossOrigin = 'anonymous';
+    qrImage.onload = () => {
+      // Draw QR code centered
+      ctx.drawImage(qrImage, 200, 140, 200, 200);
+      
+      // Add footer text
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#999';
+      ctx.fillText('Scan to visit the website', 300, 370);
+
+      // Download the card
+      const link = document.createElement('a');
+      link.download = 'qr-code-card.png';
+      link.href = cardCanvas.toDataURL();
+      link.click();
+      
+      toast({
+        title: "Card Downloaded",
+        description: "Your branded QR code card is being downloaded.",
+      });
+    };
+    qrImage.src = qrCodeUrl;
   };
 
   const copyToClipboard = async () => {
@@ -138,31 +194,8 @@ const QRGenerator = () => {
     }
   };
 
-  const shareQRCode = async () => {
-    if (!qrCodeUrl) return;
-
-    if (navigator.share) {
-      try {
-        const response = await fetch(qrCodeUrl);
-        const blob = await response.blob();
-        const file = new File([blob], 'qr-code.png', { type: 'image/png' });
-        
-        await navigator.share({
-          title: 'QR Code',
-          text: `QR Code for ${url}`,
-          files: [file]
-        });
-        
-        toast({
-          title: "Shared Successfully",
-          description: "QR code shared successfully.",
-        });
-      } catch (error) {
-        copyToClipboard(); // Fallback to copy
-      }
-    } else {
-      copyToClipboard(); // Fallback to copy
-    }
+  const openShareModal = () => {
+    setShowShareModal(true);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -214,11 +247,19 @@ const QRGenerator = () => {
             <div className="text-center space-y-6">
               <div className="flex justify-center">
                 <div className="p-4 bg-white rounded-xl shadow-lg animate-float">
-                  <canvas
-                    ref={canvasRef}
-                    className="rounded-lg"
-                    style={{ display: qrCodeUrl ? 'block' : 'none' }}
-                  />
+                  {qrCodeUrl ? (
+                    <img 
+                      src={qrCodeUrl} 
+                      alt="Generated QR Code"
+                      className="rounded-lg w-64 h-64"
+                    />
+                  ) : (
+                    <canvas
+                      ref={canvasRef}
+                      className="rounded-lg"
+                      style={{ display: 'none' }}
+                    />
+                  )}
                 </div>
               </div>
               
@@ -229,12 +270,12 @@ const QRGenerator = () => {
 
               <div className="flex gap-3 justify-center flex-wrap">
                 <Button
-                  onClick={downloadQRCode}
+                  onClick={downloadQRCard}
                   variant="outline"
                   className="gap-2 border-border/50 hover:bg-muted/50"
                 >
                   <Download className="h-4 w-4" />
-                  Download
+                  Download Card
                 </Button>
                 <Button
                   onClick={copyToClipboard}
@@ -245,7 +286,7 @@ const QRGenerator = () => {
                   Copy
                 </Button>
                 <Button
-                  onClick={shareQRCode}
+                  onClick={openShareModal}
                   variant="outline"
                   className="gap-2 border-border/50 hover:bg-muted/50"
                 >
@@ -262,6 +303,14 @@ const QRGenerator = () => {
       <canvas
         ref={canvasRef}
         style={{ display: 'none' }}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        qrCodeUrl={qrCodeUrl}
+        url={url}
       />
     </div>
   );
