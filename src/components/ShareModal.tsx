@@ -35,48 +35,107 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
       name: 'Facebook',
       icon: Facebook,
       color: 'bg-blue-600 hover:bg-blue-700',
-      action: () => {
-        const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-        window.open(shareUrl, '_blank', 'width=600,height=400');
+      action: async () => {
+        await shareToSocial('facebook');
       }
     },
     {
       name: 'Twitter',
       icon: Twitter,
       color: 'bg-sky-500 hover:bg-sky-600',
-      action: () => {
-        const shareUrl = `https://twitter.com/intent/tweet?text=Check out this QR code&url=${encodeURIComponent(url)}`;
-        window.open(shareUrl, '_blank', 'width=600,height=400');
+      action: async () => {
+        await shareToSocial('twitter');
       }
     },
     {
       name: 'LinkedIn',
       icon: Linkedin,
       color: 'bg-blue-700 hover:bg-blue-800',
-      action: () => {
-        const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-        window.open(shareUrl, '_blank', 'width=600,height=400');
+      action: async () => {
+        await shareToSocial('linkedin');
       }
     },
     {
       name: 'WhatsApp',
       icon: MessageCircle,
       color: 'bg-green-600 hover:bg-green-700',
-      action: () => {
-        const shareUrl = `https://wa.me/?text=Check out this link: ${encodeURIComponent(url)}`;
-        window.open(shareUrl, '_blank');
+      action: async () => {
+        await shareToSocial('whatsapp');
       }
     },
     {
       name: 'Email',
       icon: Mail,
       color: 'bg-gray-600 hover:bg-gray-700',
-      action: () => {
-        const shareUrl = `mailto:?subject=QR Code&body=Check out this link: ${url}`;
-        window.open(shareUrl);
+      action: async () => {
+        await shareToSocial('email');
       }
     }
   ];
+
+  const shareToSocial = async (platform: string) => {
+    try {
+      // First try to share the QR code image if the browser supports it
+      if (navigator.share && navigator.canShare) {
+        const response = await fetch(qrCodeUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+        
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'QR Code',
+            text: `QR Code for ${url}`,
+            files: [file]
+          });
+          
+          toast({
+            title: "Shared Successfully",
+            description: "QR code image shared successfully.",
+          });
+          return;
+        }
+      }
+      
+      // Fallback to URL sharing for different platforms
+      let shareUrl = '';
+      const message = `Check out this QR code for: ${url}`;
+      
+      switch (platform) {
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(message)}`;
+          window.open(shareUrl, '_blank', 'width=600,height=400');
+          break;
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+          window.open(shareUrl, '_blank', 'width=600,height=400');
+          break;
+        case 'linkedin':
+          shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(message)}`;
+          window.open(shareUrl, '_blank', 'width=600,height=400');
+          break;
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          window.open(shareUrl, '_blank');
+          break;
+        case 'email':
+          shareUrl = `mailto:?subject=QR Code&body=${encodeURIComponent(message)}`;
+          window.open(shareUrl);
+          break;
+      }
+      
+      toast({
+        title: "Opening Share Dialog",
+        description: "Opening platform sharing dialog...",
+      });
+      
+    } catch (error) {
+      toast({
+        title: "Share Failed",
+        description: "Unable to share QR code. You can download it instead.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const downloadQRCode = () => {
     if (!qrCodeUrl) return;
