@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Download, Share2, Copy, QrCode } from 'lucide-react';
 import ShareModal from './ShareModal';
+import { generateQrCardImage } from '@/lib/qrCard';
 
 const QRGenerator = () => {
   const [url, setUrl] = useState('');
@@ -94,70 +95,42 @@ const QRGenerator = () => {
 
   const downloadQRCard = async () => {
     if (!qrCodeUrl) return;
-
-    // Create a branded card canvas
-    const cardCanvas = document.createElement('canvas');
-    const ctx = cardCanvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set card dimensions
-    cardCanvas.width = 600;
-    cardCanvas.height = 400;
-
-    // Draw card background with gradient
-    const gradient = ctx.createLinearGradient(0, 0, 600, 400);
-    gradient.addColorStop(0, 'hsl(262, 83%, 58%)');
-    gradient.addColorStop(1, 'hsl(230, 83%, 58%)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 600, 400);
-
-    // Draw white content area
-    ctx.fillStyle = 'white';
-    ctx.roundRect(20, 20, 560, 360, 16);
-    ctx.fill();
-
-    // Add brand title
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('QR Code Generator', 300, 80);
-
-    // Add URL text
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#666';
-    const formattedUrl = formatUrl(url);
-    const maxWidth = 200;
-    if (ctx.measureText(formattedUrl).width > maxWidth) {
-      const truncated = formattedUrl.substring(0, 30) + '...';
-      ctx.fillText(truncated, 300, 110);
-    } else {
-      ctx.fillText(formattedUrl, 300, 110);
-    }
-
-    // Load and draw QR code
-    const qrImage = new Image();
-    qrImage.crossOrigin = 'anonymous';
-    qrImage.onload = () => {
-      // Draw QR code centered
-      ctx.drawImage(qrImage, 200, 140, 200, 200);
-      
-      // Add footer text
-      ctx.font = '14px Arial';
-      ctx.fillStyle = '#999';
-      ctx.fillText('Scan to visit the website', 300, 370);
-
-      // Download the card
-      const link = document.createElement('a');
-      link.download = 'qr-code-card.png';
-      link.href = cardCanvas.toDataURL();
-      link.click();
-      
-      toast({
-        title: "Card Downloaded",
-        description: "Your branded QR code card is being downloaded.",
+    try {
+      const { blob, dataUrl } = await generateQrCardImage({
+        qrDataUrl: qrCodeUrl,
+        url: formatUrl(url),
+        brandName: 'QR Flash Code',
       });
-    };
-    qrImage.src = qrCodeUrl;
+
+      // Prefer Blob/Object URL for better mobile support
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'qr-code-card.png';
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        // iOS Safari often ignores download attr for data/object URLs
+        window.open(dataUrl, '_blank');
+      } else {
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      toast({
+        title: 'Card Downloaded',
+        description: 'Your branded QR card is being downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: 'Unable to create the branded card. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const copyToClipboard = async () => {
