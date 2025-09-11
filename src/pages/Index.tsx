@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import QRGenerator from '@/components/QRGenerator';
 import Features from '@/components/Features';
 import Footer from '@/components/Footer';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 
 const Index = () => {
   return (
@@ -17,6 +18,7 @@ const Index = () => {
         <Features />
         <Footer />
       </div>
+      <PWAInstallPrompt />
     </div>
   );
 };
