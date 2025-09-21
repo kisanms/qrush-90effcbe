@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,9 @@ import {
   MessageCircle,
   Share,
   Download,
-  Copy
+  Copy,
+  Image,
+  QrCode
 } from 'lucide-react';
 import { generateQrCardImage } from '@/lib/qrCard';
 
@@ -30,6 +32,7 @@ interface ShareModalProps {
 
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url }) => {
   const { toast } = useToast();
+  const [shareMode, setShareMode] = useState<'card' | 'qr'>('card');
 
   const shareOptions = [
     {
@@ -76,33 +79,58 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
 
   const shareToSocial = async (platform: string) => {
     try {
-      // First try to share the CARD image if the browser supports it
-      if (navigator.share && navigator.canShare) {
-        const { blob } = await generateQrCardImage({
-          qrDataUrl: qrCodeUrl,
-          url,
-          brandName: 'QR Flash Code',
-        });
-        const file = new File([blob], 'qr-card.png', { type: 'image/png' });
-
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'QR Card',
-            text: `QR card for ${url}`,
-            files: [file],
+      if (shareMode === 'card') {
+        // Share branded card image
+        if (navigator.share && navigator.canShare) {
+          const { blob } = await generateQrCardImage({
+            qrDataUrl: qrCodeUrl,
+            url,
+            brandName: 'QRUSH',
           });
+          const file = new File([blob], 'qrush-card.png', { type: 'image/png' });
 
-          toast({
-            title: 'Shared Successfully',
-            description: 'QR card image shared successfully.',
-          });
-          return;
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'QRUSH QR Card',
+              text: `QR card for ${url}`,
+              files: [file],
+            });
+
+            toast({
+              title: 'Shared Successfully',
+              description: 'QR card image shared successfully.',
+            });
+            return;
+          }
+        }
+      } else {
+        // Share QR code only
+        if (navigator.share && navigator.canShare) {
+          const response = await fetch(qrCodeUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'QR Code',
+              text: `QR code for ${url}`,
+              files: [file],
+            });
+
+            toast({
+              title: 'Shared Successfully',
+              description: 'QR code shared successfully.',
+            });
+            return;
+          }
         }
       }
 
       // Fallback to URL sharing for different platforms
       let shareUrl = '';
-      const message = `Check out this QR card for: ${url}`;
+      const message = shareMode === 'card' 
+        ? `Check out this QR card for: ${url}` 
+        : `Check out this QR code for: ${url}`;
 
       switch (platform) {
         case 'facebook':
@@ -122,7 +150,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
           window.open(shareUrl, '_blank');
           break;
         case 'email':
-          shareUrl = `mailto:?subject=QR Card&body=${encodeURIComponent(message)}`;
+          shareUrl = `mailto:?subject=${shareMode === 'card' ? 'QRUSH QR Card' : 'QR Code'}&body=${encodeURIComponent(message)}`;
           window.open(shareUrl);
           break;
       }
@@ -134,7 +162,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
     } catch (error) {
       toast({
         title: 'Share Failed',
-        description: 'Unable to share QR card. You can download it instead.',
+        description: `Unable to share ${shareMode === 'card' ? 'QR card' : 'QR code'}. You can download it instead.`,
         variant: 'destructive',
       });
     }
@@ -143,35 +171,56 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
   const downloadQRCode = async () => {
     if (!qrCodeUrl) return;
     try {
-      const { blob, dataUrl } = await generateQrCardImage({
-        qrDataUrl: qrCodeUrl,
-        url,
-        brandName: 'QR Flash Code',
-      });
+      if (shareMode === 'card') {
+        const { blob, dataUrl } = await generateQrCardImage({
+          qrDataUrl: qrCodeUrl,
+          url,
+          brandName: 'QRUSH',
+        });
 
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = 'qr-code-card.png';
-      link.href = blobUrl;
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'qrush-card.png';
+        link.href = blobUrl;
 
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        window.open(dataUrl, '_blank');
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+          window.open(dataUrl, '_blank');
+        } else {
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+        toast({
+          title: 'Download Started',
+          description: 'Your QR card is being downloaded.',
+        });
       } else {
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        // Download QR code only
+        const link = document.createElement('a');
+        link.download = 'qr-code.png';
+        link.href = qrCodeUrl;
+        
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+          window.open(qrCodeUrl, '_blank');
+        } else {
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
 
-      toast({
-        title: 'Download Started',
-        description: 'Your QR card is being downloaded.',
-      });
+        toast({
+          title: 'Download Started',
+          description: 'Your QR code is being downloaded.',
+        });
+      }
     } catch (e) {
       toast({
         title: 'Download Failed',
-        description: 'Unable to create the QR card image.',
+        description: `Unable to download ${shareMode === 'card' ? 'QR card' : 'QR code'}.`,
         variant: 'destructive',
       });
     }
@@ -196,31 +245,50 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
   const shareNative = async () => {
     if (navigator.share) {
       try {
-        const { blob } = await generateQrCardImage({
-          qrDataUrl: qrCodeUrl,
-          url,
-          brandName: 'QR Flash Code',
-        });
-        const file = new File([blob], 'qr-card.png', { type: 'image/png' });
+        if (shareMode === 'card') {
+          const { blob } = await generateQrCardImage({
+            qrDataUrl: qrCodeUrl,
+            url,
+            brandName: 'QRUSH',
+          });
+          const file = new File([blob], 'qrush-card.png', { type: 'image/png' });
 
-        if ((navigator as any).canShare?.({ files: [file] })) {
-          await navigator.share({
-            title: 'QR Card',
-            text: `QR card for ${url}`,
-            files: [file],
-          });
+          if ((navigator as any).canShare?.({ files: [file] })) {
+            await navigator.share({
+              title: 'QRUSH QR Card',
+              text: `QR card for ${url}`,
+              files: [file],
+            });
+          } else {
+            await navigator.share({
+              title: 'QRUSH QR Card',
+              text: `QR card for ${url}`,
+              url: window.location.href,
+            });
+          }
         } else {
-          // Fallback: share without file support
-          await navigator.share({
-            title: 'QR Card',
-            text: `QR card for ${url}`,
-            url: window.location.href,
-          });
+          const response = await fetch(qrCodeUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+
+          if ((navigator as any).canShare?.({ files: [file] })) {
+            await navigator.share({
+              title: 'QR Code',
+              text: `QR code for ${url}`,
+              files: [file],
+            });
+          } else {
+            await navigator.share({
+              title: 'QR Code',
+              text: `QR code for ${url}`,
+              url: window.location.href,
+            });
+          }
         }
 
         toast({
           title: 'Shared Successfully',
-          description: 'QR card shared successfully.',
+          description: `${shareMode === 'card' ? 'QR card' : 'QR code'} shared successfully.`,
         });
       } catch (error) {
         console.log('Native sharing failed');
@@ -242,6 +310,28 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Share Mode Toggle */}
+          <div className="flex p-1 bg-muted rounded-lg">
+            <Button
+              variant={shareMode === 'card' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setShareMode('card')}
+              className="flex-1 gap-2"
+            >
+              <Image className="h-4 w-4" />
+              Branded Card
+            </Button>
+            <Button
+              variant={shareMode === 'qr' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setShareMode('qr')}
+              className="flex-1 gap-2"
+            >
+              <QrCode className="h-4 w-4" />
+              QR Only
+            </Button>
+          </div>
+
           {/* QR Code Preview */}
           <div className="flex justify-center">
             <div className="p-3 bg-white rounded-lg shadow-sm border">
@@ -255,7 +345,9 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
 
           {/* URL Display */}
           <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-1">QR Code for:</p>
+            <p className="text-sm text-muted-foreground mb-1">
+              {shareMode === 'card' ? 'QR Card for:' : 'QR Code for:'}
+            </p>
             <p className="font-medium text-sm break-all bg-muted px-3 py-2 rounded">
               {url}
             </p>
@@ -283,7 +375,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
           <div className="flex gap-2 pt-4 border-t">
             <Button onClick={downloadQRCode} variant="outline" className="flex-1 gap-2">
               <Download className="h-4 w-4" />
-              Download
+              Download {shareMode === 'card' ? 'Card' : 'QR'}
             </Button>
             <Button onClick={copyUrl} variant="outline" className="flex-1 gap-2">
               <Copy className="h-4 w-4" />

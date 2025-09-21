@@ -1,8 +1,8 @@
-const CACHE_NAME = 'qr-flash-v1';
+const CACHE_NAME = 'qrush-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/placeholder.svg'
+  '/qrush-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

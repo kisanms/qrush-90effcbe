@@ -29,7 +29,7 @@ export const PWAInstallPrompt = () => {
       setShowInstallPrompt(false);
       toast({
         title: "App Installed! 🎉",
-        description: "QR Flash has been added to your home screen",
+        description: "QRUSH has been added to your home screen",
       });
     };
 
@@ -51,7 +51,7 @@ export const PWAInstallPrompt = () => {
     if (outcome === 'accepted') {
       toast({
         title: "Installing...",
-        description: "QR Flash is being added to your device",
+        description: "QRUSH is being added to your device",
       });
     }
     
@@ -75,7 +75,7 @@ export const PWAInstallPrompt = () => {
         <div className="flex items-start gap-3">
           <Download className="h-5 w-5 text-primary mt-0.5" />
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm">Install QR Flash</h3>
+            <h3 className="font-semibold text-sm">Install QRUSH</h3>
             <p className="text-xs text-muted-foreground mt-1">
               Add to your home screen for quick access to generate QR codes
             </p>
