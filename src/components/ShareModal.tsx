@@ -298,92 +298,94 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, qrCodeUrl, url
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <Share className="h-5 w-5" />
             Share QR Code
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Share your QR code on social platforms or download it
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Share Mode Toggle */}
           <div className="flex p-1 bg-muted rounded-lg">
             <Button
               variant={shareMode === 'card' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setShareMode('card')}
-              className="flex-1 gap-2"
+              className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm"
             >
-              <Image className="h-4 w-4" />
-              Branded Card
+              <Image className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Branded Card</span>
+              <span className="xs:hidden">Card</span>
             </Button>
             <Button
               variant={shareMode === 'qr' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setShareMode('qr')}
-              className="flex-1 gap-2"
+              className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm"
             >
-              <QrCode className="h-4 w-4" />
-              QR Only
+              <QrCode className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">QR Only</span>
+              <span className="xs:hidden">QR</span>
             </Button>
           </div>
 
           {/* QR Code Preview */}
           <div className="flex justify-center">
-            <div className="p-3 bg-white rounded-lg shadow-sm border">
+            <div className="p-2 sm:p-3 bg-white rounded-lg shadow-sm border">
               <img 
                 src={qrCodeUrl} 
                 alt="QR Code" 
-                className="w-32 h-32 rounded"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded"
               />
             </div>
           </div>
 
           {/* URL Display */}
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-1">
+          <div className="text-center px-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">
               {shareMode === 'card' ? 'QR Card for:' : 'QR Code for:'}
             </p>
-            <p className="font-medium text-sm break-all bg-muted px-3 py-2 rounded">
+            <p className="font-medium text-xs sm:text-sm break-all bg-muted px-2 sm:px-3 py-2 rounded leading-relaxed">
               {url}
             </p>
           </div>
 
           {/* Social Share Options */}
-          <div>
+          <div className="px-1">
             <h4 className="text-sm font-medium mb-3">Share on social platforms</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {shareOptions.map((option) => (
                 <Button
                   key={option.name}
                   onClick={option.action}
-                  className={`${option.color} text-white flex flex-col items-center gap-2 h-auto py-3`}
+                  className={`${option.color} text-white flex flex-col items-center gap-1 sm:gap-2 h-auto py-2 sm:py-3`}
                   size="sm"
                 >
-                  <option.icon className="h-5 w-5" />
-                  <span className="text-xs">{option.name}</span>
+                  <option.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs leading-tight">{option.name}</span>
                 </Button>
               ))}
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={downloadQRCode} variant="outline" className="flex-1 gap-2">
-              <Download className="h-4 w-4" />
+          <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+            <Button onClick={downloadQRCode} variant="outline" className="flex-1 gap-2 text-xs sm:text-sm">
+              <Download className="h-3 w-3 sm:h-4 sm:w-4" />
               Download {shareMode === 'card' ? 'Card' : 'QR'}
             </Button>
-            <Button onClick={copyUrl} variant="outline" className="flex-1 gap-2">
-              <Copy className="h-4 w-4" />
+            <Button onClick={copyUrl} variant="outline" className="flex-1 gap-2 text-xs sm:text-sm">
+              <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
               Copy URL
             </Button>
             {navigator.share && (
-              <Button onClick={shareNative} variant="outline" className="flex-1 gap-2">
-                <Share className="h-4 w-4" />
+              <Button onClick={shareNative} variant="outline" className="flex-1 gap-2 text-xs sm:text-sm">
+                <Share className="h-3 w-3 sm:h-4 sm:w-4" />
                 Share
               </Button>
             )}
